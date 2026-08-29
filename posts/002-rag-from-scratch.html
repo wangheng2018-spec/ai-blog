@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG From Scratch: TF-IDF, BM25, and RRF — Written by Hand</title>
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --text:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --border:#2a2e37; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.8; font-size:1.02rem; }
+  .container { max-width:760px; margin:0 auto; padding:0 24px; }
+  header { padding:50px 0 20px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.9rem; }
+  .back:hover { color:var(--accent); }
+  h1 { font-size:1.9rem; margin:16px 0 8px; line-height:1.3; }
+  .meta { color:var(--muted); font-size:.9rem; margin-bottom:30px; }
+  h2 { font-size:1.35rem; margin:40px 0 14px; color:var(--accent); }
+  p { margin-bottom:16px; }
+  pre { background:#0a0c10; border:1px solid var(--border); border-radius:8px; padding:16px; overflow-x:auto; font-size:.9rem; margin:16px 0; }
+  code { font-family:'SF Mono',Consolas,monospace; }
+  :not(pre) > code { background:#232733; padding:2px 6px; border-radius:4px; font-size:.88rem; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:.92rem; }
+  th, td { border:1px solid var(--border); padding:8px 12px; text-align:left; }
+  th { background:#1a2436; }
+  .callout { background:#1a2436; border-left:3px solid var(--accent); padding:14px 18px; border-radius:0 8px 8px 0; margin:20px 0; }
+  footer { padding:40px 0 60px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); margin-top:50px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a class="back" href="../index.html">← Back to blog</a>
+    <h1>RAG From Scratch: Why I Wrote TF-IDF, BM25, and RRF by Hand</h1>
+    <p class="meta">August 27, 2026 · 7 min read · <a href="https://github.com/wangheng2018-spec/ai-knowledge-shop" style="color:var(--accent)">Source code</a></p>
+  </header>
+
+  <p>Most RAG tutorials start with <code>pip install langchain chromadb</code>. I went the other way: I wrote the retrieval engine by hand — TF-IDF, BM25, and Reciprocal Rank Fusion — with zero dependencies. This post is about what I learned, and why the "boring" path made me a better engineer.</p>
+
+  <h2>The problem: LLMs hallucinate facts</h2>
+  <p>Ask a raw LLM about your shop's return policy and it will confidently invent one. For a business, that's fatal. The fix is RAG: retrieve the relevant knowledge, then let the LLM answer <em>only from that context</em>.</p>
+
+  <p>The pipeline:</p>
+  <pre><code>Customer question
+  → ① Retrieve   TF-IDF + BM25 dual retrieval + RRF re-rank
+  → ② Assemble   Inject top chunks into the prompt
+  → ③ Generate   DeepSeek answers from knowledge only</code></pre>
+
+  <h2>Three algorithms, written by hand</h2>
+  <table>
+    <tr><th>Algorithm</th><th>Idea in one line</th><th>Why it matters</th></tr>
+    <tr><td><strong>TF-IDF</strong></td><td>Term frequency × inverse document frequency, cosine similarity</td><td>Intuitive, explainable baseline</td></tr>
+    <tr><td><strong>BM25</strong></td><td>Term frequency saturation + document length normalization</td><td>Industry standard — same as Elasticsearch</td></tr>
+    <tr><td><strong>RRF</strong></td><td>Merge ranked lists by reciprocal rank</td><td>Combines strengths, more robust</td></tr>
+  </table>
+
+  <h3>BM25 in 20 lines</h3>
+  <pre><code>def bm25_score(query_terms, doc, doc_freqs, N, avg_dl, k1=1.5, b=0.75):
+    dl = len(doc)
+    score = 0.0
+    for term in query_terms:
+        tf = doc.count(term)
+        if tf == 0:
+            continue
+        df = doc_freqs.get(term, 0)
+        idf = math.log(1 + (N - df + 0.5) / (df + 0.5))
+        tf_norm = (tf * (k1 + 1)) / (tf + k1 * (1 - b + b * dl / avg_dl))
+        score += idf * tf_norm
+    return score</code></pre>
+
+  <p>The <code>k1</code> and <code>b</code> parameters are the magic: <code>k1</code> saturates term frequency (a word appearing 10× isn't 10× more important), and <code>b</code> penalizes long documents. Tuning these two numbers beats adding a vector database in many cases.</p>
+
+  <h2>Chinese text: the jieba detour</h2>
+  <p>My knowledge base is in Chinese — and Chinese has no spaces between words. <code>"手机回收"</code> could tokenize as <code>["手机", "回收"]</code> or <code>["手", "机回", "收"]</code>. I used <code>jieba</code>, a pure-Python segmenter, which solved it in one line. The lesson: <strong>language-specific preprocessing often matters more than the retrieval algorithm itself.</strong></p>
+
+  <h2>Query rewriting: the hidden 30% win</h2>
+  <p>Customers don't type like search queries. They say <em>"寄过来安全吗会不会被骗"</em> ("is it safe to ship, will I get scammed"). The knowledge base says <em>"付款安全"</em> ("payment security"). These don't match.</p>
+
+  <p>Fix: before retrieving, ask a cheap LLM call to rewrite the casual question into 3-5 retrieval keywords. This lifted hit quality dramatically in my tests:</p>
+
+  <pre><code>Customer: "寄过来安全吗会不会被骗"
+Rewrite:  "付款安全 交易保障 防诈骗 流程"
+→ hits payment-security doc #9 (was missing before)</code></pre>
+
+  <div class="callout">
+    💡 <strong>Insight:</strong> A 1-cent LLM call that rewrites the query can be worth more than a $100/month embedding API. Understand where your bottleneck actually is before spending money.
+  </div>
+
+  <h2>Then I added vectors (and why)</h2>
+  <p>After the hand-written baseline worked, I upgraded to ChromaDB + <code>bge-m3</code> embeddings + a <code>bge-reranker</code> cross-encoder for neural re-ranking. The hybrid pipeline:</p>
+  <pre><code>BM25 (free, local) + bge-m3 (semantic)
+  → bge-reranker (neural re-rank)
+  → DeepSeek (generate)</code></pre>
+
+  <p>The reranker is the real upgrade — it reads query+document pairs together, which pure embeddings can't do. But I wouldn't have understood <em>why</em> it's better without building the naive version first.</p>
+
+  <h2>The takeaway</h2>
+  <p><strong>Build the boring version first.</strong> A hand-written BM25+RRF pipeline is free, fast, explainable, and gets you 80% of the way. Add vectors when you can measure the gap. In a world of copy-paste RAG stacks, being able to explain <em>why</em> each piece exists is a genuine differentiator — for your product, and for your interview.</p>
+
+  <footer>
+    <p><a href="../index.html" style="color:var(--muted)">← Back to blog</a> · © 2026 Wang Heng</p>
+  </footer>
+</div>
+</body>
+</html>
