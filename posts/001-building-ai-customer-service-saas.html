@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building a Multi-Tenant AI Customer Service SaaS with Zero Cloud Cost</title>
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --text:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --border:#2a2e37; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.8; font-size:1.02rem; }
+  .container { max-width:760px; margin:0 auto; padding:0 24px; }
+  header { padding:50px 0 20px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.9rem; }
+  .back:hover { color:var(--accent); }
+  h1 { font-size:1.9rem; margin:16px 0 8px; line-height:1.3; }
+  .meta { color:var(--muted); font-size:.9rem; margin-bottom:30px; }
+  h2 { font-size:1.35rem; margin:40px 0 14px; color:var(--accent); }
+  h3 { font-size:1.1rem; margin:28px 0 10px; }
+  p { margin-bottom:16px; }
+  pre { background:#0a0c10; border:1px solid var(--border); border-radius:8px; padding:16px; overflow-x:auto; font-size:.9rem; margin:16px 0; }
+  code { font-family:'SF Mono',Consolas,monospace; }
+  :not(pre) > code { background:#232733; padding:2px 6px; border-radius:4px; font-size:.88rem; }
+  ul, ol { padding-left:24px; margin-bottom:16px; }
+  li { margin-bottom:6px; }
+  .callout { background:#1a2436; border-left:3px solid var(--accent); padding:14px 18px; border-radius:0 8px 8px 0; margin:20px 0; }
+  footer { padding:40px 0 60px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); margin-top:50px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a class="back" href="../index.html">← Back to blog</a>
+    <h1>Building a Multi-Tenant AI Customer Service SaaS with Zero Cloud Cost</h1>
+    <p class="meta">August 28, 2026 · 8 min read · <a href="https://github.com/wangheng2018-spec/ai-shop-saas" style="color:var(--accent)">Source code</a></p>
+  </header>
+
+  <p>I've been building AI agents for a while. But there's a gap between <em>an agent that works on my laptop</em> and <em>a product someone pays for</em>. This post is about crossing that gap: turning three days of agent-building into a multi-tenant SaaS — with users, shops, orders, and simulated payments — running on a single Flask process with SQLite.</p>
+
+  <h2>The problem with "AI that can chat"</h2>
+  <p>My earlier agents could answer questions, remember customers, and even plan tasks. But they couldn't do three things that matter for a business:</p>
+  <ul>
+    <li><strong>No user system</strong> — anyone could use it, so nobody would pay.</li>
+    <li><strong>No orders or payments</strong> — the AI could talk, but it couldn't close a deal.</li>
+    <li><strong>Standalone scripts</strong> — no way to deploy for someone else.</li>
+  </ul>
+
+  <p>The insight: <strong>an AI customer service agent only creates value when it's embedded in a business loop.</strong> Chat is the interface; the loop is: register → configure → serve customers → collect payment.</p>
+
+  <h2>Architecture: one process, five tables</h2>
+  <pre><code>┌─────────────────────────────────────────────┐
+│  Flask Web (app.py)                          │
+│  ├─ User System    Register/Login/Token Auth │
+│  ├─ Shop Management    Prices/Welcome/Plans  │
+│  ├─ AI Customer Service    POST /api/chat    │
+│  ├─ Order & Payment    Order→Pay→Callback    │
+│  └─ Demo Console     Browser                 │
+├─────────────────────────────────────────────┤
+│  AI Engine (ai_engine.py)  Memory+Pricing+   │
+│                          Purchase Intent     │
+├─────────────────────────────────────────────┤
+│  Database (db.py)  SQLite                   │
+│   users / shops / orders / payments / msgs   │
+└─────────────────────────────────────────────┘</code></pre>
+
+  <p>Deliberately boring on purpose. No Kubernetes, no microservices, no message queue. A single Flask app with SQLite can handle the first 10,000 users of a product like this — and it costs <strong>$0/month</strong> to run.</p>
+
+  <h2>The AI engine: memory + pricing + intent</h2>
+  <p>The heart is <code>ai_engine.py</code>. It does three jobs:</p>
+  <ol>
+    <li><strong>Remembers</strong> — each shop has its own conversation context, so the AI knows what the customer asked 10 minutes ago.</li>
+    <li><strong>Quotes prices</strong> — reads the shop owner's price list, so the AI never invents a price. This is the trust-killer most chatbots fail at.</li>
+    <li><strong>Detects purchase intent</strong> — when the customer says "I want to buy it", the engine returns a structured action, and the backend creates an order.</li>
+  </ol>
+
+  <div class="callout">
+    💡 <strong>Design lesson:</strong> the AI doesn't decide <em>whether</em> to create an order — it returns intent, and the backend decides. This keeps money flows deterministic and auditable. Never let the LLM be the source of truth for financial state.
+  </div>
+
+  <h2>Multi-tenant isolation done simply</h2>
+  <p>Every table has a <code>shop_id</code>. Every query filters by it. That's it. For a product at this stage, row-level scoping beats complex tenant-per-database setups — you can migrate later when a real customer demands it.</p>
+
+  <h2>The payment state machine</h2>
+  <p>Orders flow through <code>pending → paid</code>. The payment endpoint is idempotent: calling it twice doesn't double-charge. This is the kind of detail that separates a demo from a product.</p>
+
+  <pre><code># Idempotent payment: same order, same result
+def pay_order(order_id, user_id):
+    order = get_order(order_id)
+    if order.status == 'paid':
+        return order  # already paid, no double-charge
+    order.status = 'paid'
+    save(order)
+    return order</code></pre>
+
+  <h2>What I'd do differently</h2>
+  <ul>
+    <li><strong>Real payments</strong> — WeChat Pay / Stripe instead of simulation. The interface is already clean, so swapping is a day of work.</li>
+    <li><strong>Rate limiting</strong> — LLM calls cost money; per-shop daily quotas are essential before real customers.</li>
+    <li><strong>Async processing</strong> — for long conversations, a queue (Redis or even SQLite-backed) would help.</li>
+  </ul>
+
+  <h2>Why this matters for an indie developer</h2>
+  <p>The bar for shipping a real product is lower than most people think. One process, five tables, one LLM API — and you have a business. The hard part isn't the tech; it's deciding what loop to close. <strong>AI + a payment loop is the most direct path from code to revenue I know.</strong></p>
+
+  <footer>
+    <p><a href="../index.html" style="color:var(--muted)">← Back to blog</a> · © 2026 Wang Heng</p>
+  </footer>
+</div>
+</body>
+</html>
