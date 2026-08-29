@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wang Heng - AI Engineer Blog</title>
+<meta name="description" content="Building AI-powered products: multi-agent systems, RAG, SaaS. From China to the world.">
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --text:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --border:#2a2e37; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.7; }
+  .container { max-width:820px; margin:0 auto; padding:0 24px; }
+  header { padding:60px 0 30px; border-bottom:1px solid var(--border); }
+  h1 { font-size:2.2rem; font-weight:800; letter-spacing:-0.5px; }
+  .subtitle { color:var(--muted); margin-top:8px; font-size:1.05rem; }
+  .meta { color:var(--muted); font-size:.9rem; margin-top:16px; }
+  nav { padding:16px 0; display:flex; gap:24px; border-bottom:1px solid var(--border); }
+  nav a { color:var(--muted); text-decoration:none; font-size:.95rem; transition:color .2s; }
+  nav a:hover { color:var(--accent); }
+  .post-list { padding:30px 0; }
+  .post { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:20px; transition:transform .15s, border-color .15s; }
+  .post:hover { transform:translateY(-2px); border-color:var(--accent); }
+  .post h2 { font-size:1.3rem; margin-bottom:8px; }
+  .post h2 a { color:var(--text); text-decoration:none; }
+  .post h2 a:hover { color:var(--accent); }
+  .post .desc { color:var(--muted); font-size:.95rem; }
+  .post .tag { display:inline-block; background:#1e3a5f; color:#7fb8ff; font-size:.75rem; padding:2px 10px; border-radius:20px; margin-top:10px; margin-right:6px; }
+  footer { padding:40px 0 60px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Wang Heng</h1>
+    <p class="subtitle">AI Engineer · Building production AI systems — multi-agent, RAG, SaaS. From China, building for the world.</p>
+    <p class="meta">📍 China · ✉️ wangheng2018@gmail.com · 🔗 <a href="https://github.com/wangheng2018-spec" style="color:var(--accent)">GitHub</a></p>
+  </header>
+
+  <nav>
+    <a href="index.html">Blog</a>
+    <a href="about.html">About</a>
+    <a href="https://github.com/wangheng2018-spec" target="_blank">Projects</a>
+  </nav>
+
+  <div class="post-list">
+    <div class="post">
+      <h2><a href="posts/001-building-ai-customer-service-saas.html">Building a Multi-Tenant AI Customer Service SaaS with Zero Cloud Cost</a></h2>
+      <p class="desc">How I turned three days of agent-building into a revenue-ready SaaS: user system, orders, payments, and AI — on a single Flask app with SQLite.</p>
+      <span class="tag">SaaS</span><span class="tag">AI Agents</span><span class="tag">Flask</span>
+    </div>
+    <div class="post">
+      <h2><a href="posts/002-rag-from-scratch.html">RAG From Scratch: Why I Wrote TF-IDF, BM25 and RRF by Hand</a></h2>
+      <p class="desc">No GPU, no vector DB at first — a hand-written retrieval engine that beats pure LLM memory for factual answers. Then I added ChromaDB + bge-reranker.</p>
+      <span class="tag">RAG</span><span class="tag">Search</span><span class="tag">LLM</span>
+    </div>
+    <div class="post">
+      <h2><a href="posts/003-agent-memory-and-planning.html">Agents That Remember and Plan: Memory Systems and ReAct in Production</a></h2>
+      <p class="desc">A customer service agent that recognizes returning customers, recalls past quotes, and plans multi-step tasks — with cost optimization that cuts API spend by 80%.</p>
+      <span class="tag">AI Agents</span><span class="tag">Memory</span><span class="tag">ReAct</span>
+    </div>
+    <div class="post">
+      <h2><a href="posts/004-from-learning-to-orders.html">From Learning to Orders: Shipping 9 Projects in 3 Days</a></h2>
+      <p class="desc">The workflow behind building and shipping 9 AI projects in 72 hours, and how I turned them into freelance income on Xianyu (China's eBay).</p>
+      <span class="tag">Career</span><span class="tag">Shipping</span>
+    </div>
+  </div>
+
+  <footer>
+    <p>© 2026 Wang Heng · Built with ❤️ and AI · <a href="https://github.com/wangheng2018-spec/ai-blog" style="color:var(--muted)">Source</a></p>
+  </footer>
+</div>
+</body>
+</html>
