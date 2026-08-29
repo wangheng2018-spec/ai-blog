@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agents That Remember and Plan: Memory Systems and ReAct in Production</title>
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --text:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --border:#2a2e37; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.8; font-size:1.02rem; }
+  .container { max-width:760px; margin:0 auto; padding:0 24px; }
+  header { padding:50px 0 20px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.9rem; }
+  .back:hover { color:var(--accent); }
+  h1 { font-size:1.9rem; margin:16px 0 8px; line-height:1.3; }
+  .meta { color:var(--muted); font-size:.9rem; margin-bottom:30px; }
+  h2 { font-size:1.35rem; margin:40px 0 14px; color:var(--accent); }
+  p { margin-bottom:16px; }
+  pre { background:#0a0c10; border:1px solid var(--border); border-radius:8px; padding:16px; overflow-x:auto; font-size:.9rem; margin:16px 0; }
+  code { font-family:'SF Mono',Consolas,monospace; }
+  :not(pre) > code { background:#232733; padding:2px 6px; border-radius:4px; font-size:.88rem; }
+  .callout { background:#1a2436; border-left:3px solid var(--accent); padding:14px 18px; border-radius:0 8px 8px 0; margin:20px 0; }
+  footer { padding:40px 0 60px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); margin-top:50px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a class="back" href="../index.html">← Back to blog</a>
+    <h1>Agents That Remember and Plan: Memory Systems and ReAct in Production</h1>
+    <p class="meta">August 28, 2026 · 6 min read · <a href="https://github.com/wangheng2018-spec/ai-memory-agent" style="color:var(--accent)">Memory agent</a> · <a href="https://github.com/wangheng2018-spec/ai-react-planner" style="color:var(--accent)">Planner</a></p>
+  </header>
+
+  <p>Two capabilities separate a chatbot from an agent: <strong>memory</strong> (it knows you) and <strong>planning</strong> (it does things in steps). I built both into customer-service agents. Here's what actually worked.</p>
+
+  <h2>Part 1: Memory — the agent that recognizes returning customers</h2>
+  <p>The scenario: a customer bought a phone from you in March. In June, they come back asking about trade-in. A stateless chatbot starts from zero. A memory agent says: <em>"Welcome back! Last time you bought an iPhone 13 Pro — I remember your preferred payment method was WeChat."</em></p>
+
+  <p>That one sentence changes the customer relationship. Here's the architecture:</p>
+
+  <pre><code>Three-layer memory:
+  ├─ Working memory    current conversation (short-term)
+  ├─ Episodic memory   ChromaDB: customer profile + history
+  │                    keyed by customer_id
+  └─ Semantic memory   RAG knowledge base (product docs, policies)</code></pre>
+
+  <h3>Episodic memory in ChromaDB</h3>
+  <p>Each customer interaction is upserted into a vector store keyed by <code>customer_id</code>. When the customer returns, the agent retrieves their history with exact-ID reads (not just semantic search) — so it <em>knows</em> the previous quote instead of guessing.</p>
+
+  <pre><code># Remember the quote the agent gave last time
+collection.upsert(
+    ids=[f"quote-{customer_id}-{quote_id}"],
+    documents=[f"Quoted ¥{price} for {model} on {date}"],
+    metadatas=[{"customer_id": customer_id}]
+)</code></pre>
+
+  <h3>Graceful degradation</h3>
+  <p>Real-world lesson: embedding APIs fail, quotas run out, networks drop. My agent falls back gracefully:</p>
+  <ul>
+    <li>Embedding API down → use a local keyword matcher</li>
+    <li>Vector store unreachable → fall back to exact-ID history only</li>
+    <li>LLM timeout → retry with exponential backoff, then answer from retrieved context alone</li>
+  </ul>
+
+  <div class="callout">
+    💡 <strong>Production lesson:</strong> an agent that works with degraded infrastructure is worth more than a perfect one that crashes. Design fallbacks first.
+  </div>
+
+  <h2>Part 2: Planning — ReAct vs Plan-and-Execute</h2>
+  <p>I implemented both patterns and measured the difference:</p>
+
+  <h3>ReAct (Reason + Act)</h3>
+  <pre><code>Thought: customer wants a trade-in price for iPhone 13
+Action: query_price(model="iPhone 13")
+Observation: ¥3,100
+Thought: also check depreciation
+Action: calc_depreciation(...)
+Observation: 12 months, 78% retention
+Final: "Your iPhone 13 is worth about ¥3,100"</code></pre>
+
+  <p>ReAct is flexible — the model decides the next step from the last observation. Great for open-ended tasks. Cost: many LLM round-trips.</p>
+
+  <h3>Plan-and-Execute</h3>
+  <p>Write the whole plan first, then execute steps, then summarize. Fewer LLM calls, cheaper for long tasks. I use ReAct for customer chat (unpredictable) and Plan-and-Execute for batch jobs (predictable).</p>
+
+  <h2>Part 3: Cost optimization — cut API spend by 80%</h2>
+  <p>Agents burn tokens. Three techniques that actually worked:</p>
+  <ol>
+    <li><strong>Response caching</strong> — identical questions (warranty, shipping policy) hit the cache after the first call. Up to 90% savings on common questions.</li>
+    <li><strong>Model tiering</strong> — route simple questions to <code>deepseek-chat</code> (cheap), complex reasoning to <code>deepseek-reasoner</code> (expensive). Keyword classification picks the tier.</li>
+    <li><strong>Context trimming</strong> — send only relevant knowledge snippets, not the full manual. Tokens per request drop dramatically.</li>
+  </ol>
+
+  <pre><code># Model tiering: cheap for simple, smart for complex
+def pick_model(question):
+    simple = ["warranty", "shipping", "hours", "price", "return"]
+    if any(k in question.lower() for k in simple):
+        return "deepseek-chat"      # $0.14/M tokens
+    return "deepseek-reasoner"      # $0.55/M tokens</code></pre>
+
+  <h2>What I'd tell my past self</h2>
+  <ul>
+    <li>Memory beats context-window stuffing. A vector store is cheaper than 100k-token prompts.</li>
+    <li>ReAct for chat, Plan-and-Execute for jobs. Don't force one pattern everywhere.</li>
+    <li>Measure cost per conversation from day one. It's the metric that decides if your product survives.</li>
+  </ul>
+
+  <footer>
+    <p><a href="../index.html" style="color:var(--muted)">← Back to blog</a> · © 2026 Wang Heng</p>
+  </footer>
+</div>
+</body>
+</html>
