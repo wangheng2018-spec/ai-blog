@@ -25,6 +25,13 @@
   .post h2 a:hover { color:var(--accent); }
   .post .desc { color:var(--muted); font-size:.95rem; }
   .post .tag { display:inline-block; background:#1e3a5f; color:#7fb8ff; font-size:.75rem; padding:2px 10px; border-radius:20px; margin-top:10px; margin-right:6px; }
+  .demo-section { padding:24px 0; }
+  .demo-section h2 { font-size:1.4rem; margin-bottom:6px; }
+  .demo-section .demo-desc { color:var(--muted); font-size:.9rem; margin-bottom:16px; }
+  .demo-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px; margin-bottom:16px; }
+  .demo-card video { width:100%; border-radius:8px; background:#000; }
+  .demo-card .demo-title { font-weight:700; margin-bottom:4px; }
+  .demo-card .demo-sub { color:var(--muted); font-size:.85rem; margin-bottom:12px; }
   footer { padding:40px 0 60px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); }
 </style>
 </head>
@@ -41,6 +48,19 @@
     <a href="about.html">About</a>
     <a href="https://github.com/wangheng2018-spec" target="_blank">Projects</a>
   </nav>
+
+  <div class="demo-section">
+    <h2>🎬 Live Demos</h2>
+    <p class="demo-desc">Real products, recorded — no slides, no mockups. Watch them work.</p>
+    <div class="demo-card">
+      <div class="demo-title">Phone Valuer — AI trade-in price estimator</div>
+      <div class="demo-sub">Pick a model, storage and condition → instant price from real deal data. Built with vanilla HTML/CSS/JS + localStorage.</div>
+      <video controls preload="metadata" poster="https://raw.githubusercontent.com/wangheng2018-spec/ai-blog/main/demo/phone_valuer_thumb.jpg">
+        <source src="https://raw.githubusercontent.com/wangheng2018-spec/ai-blog/main/demo/phone_valuer_demo.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+      </video>
+    </div>
+  </div>
 
   <div class="post-list">
     <div class="post">
