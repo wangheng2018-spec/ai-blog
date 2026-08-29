@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Wang Heng</title>
+<style>
+  :root { --bg:#0f1115; --card:#171a21; --text:#e6e6e6; --muted:#9aa0a6; --accent:#4da3ff; --border:#2a2e37; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; line-height:1.8; font-size:1.02rem; }
+  .container { max-width:760px; margin:0 auto; padding:0 24px; }
+  header { padding:50px 0 20px; }
+  .back { color:var(--muted); text-decoration:none; font-size:.9rem; }
+  .back:hover { color:var(--accent); }
+  h1 { font-size:1.9rem; margin:16px 0 8px; }
+  h2 { font-size:1.35rem; margin:40px 0 14px; color:var(--accent); }
+  p { margin-bottom:16px; }
+  ul { padding-left:24px; margin-bottom:16px; }
+  li { margin-bottom:6px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin:16px 0; }
+  .card h3 { margin-bottom:8px; color:var(--accent); }
+  a { color:var(--accent); }
+  footer { padding:40px 0 60px; color:var(--muted); font-size:.85rem; border-top:1px solid var(--border); margin-top:50px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a class="back" href="index.html">← Back to blog</a>
+    <h1>About Me</h1>
+  </header>
+
+  <p>I'm an AI engineer building production systems — multi-agent architectures, RAG pipelines, and SaaS products — from China, building for the world.</p>
+
+  <h2>What I build</h2>
+  <div class="card">
+    <h3>🤖 AI Agents</h3>
+    <p>Customer-service agents with three-layer memory (working / episodic / semantic), ReAct and Plan-and-Execute planning, and cost optimization that cuts LLM spend by up to 80%.</p>
+  </div>
+  <div class="card">
+    <h3>📚 RAG Systems</h3>
+    <p>Hand-written TF-IDF + BM25 + RRF retrieval, upgraded to hybrid retrieval with ChromaDB, bge-m3 embeddings, and neural re-ranking with bge-reranker.</p>
+  </div>
+  <div class="card">
+    <h3>🏪 SaaS Products</h3>
+    <p>Multi-tenant AI customer service SaaS: user systems, shop management, orders, and payments — on a single Flask process with SQLite, at zero cloud cost.</p>
+  </div>
+  <div class="card">
+    <h3>📈 Quantitative Trading</h3>
+    <p>Built and backtested MT4 Expert Advisors for gold trading — adaptive stop-loss and delay strategies that reduced drawdown by 35% across 483 trades.</p>
+  </div>
+
+  <h2>How I work</h2>
+  <p>I ship. In three days I built and published 9 AI projects covering multi-agent workflows, RAG, memory systems, planning, and product engineering. I believe in boring tech, clean interfaces, and products that close a real business loop.</p>
+
+  <h2>Tech stack</h2>
+  <p>Python · Flask · SQLite · ChromaDB · RAG · LLM APIs (DeepSeek, OpenAI-compatible) · Docker · HTML/CSS/JS · MQL4 · Git/GitHub</p>
+
+  <h2>Find me</h2>
+  <ul>
+    <li>GitHub: <a href="https://github.com/wangheng2018-spec">github.com/wangheng2018-spec</a></li>
+    <li>Email: wangheng2018@gmail.com</li>
+  </ul>
+
+  <footer>
+    <p><a href="index.html" style="color:var(--muted)">← Back to blog</a> · © 2026 Wang Heng</p>
+  </footer>
+</div>
+</body>
+</html>
